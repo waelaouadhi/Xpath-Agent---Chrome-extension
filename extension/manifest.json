@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "XPath Agent QA",
+  "version": "0.1.0",
+  "description": "Generate, validate, and export XPath/CSS locators for QA automation.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "http://localhost:8787/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "Open XPath Agent"
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

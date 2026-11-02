@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>XPath Agent QA</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-row">
+      <div class="brand-mark"><img src="assets/xpath-agent-logo.png" alt="XPath Agent logo"></div>
+      <div>
+        <div class="eyebrow">QA AUTOMATION WORKBENCH</div>
+        <h1>XPath Agent</h1>
+      </div>
+      <div id="backend-state" class="connection-state offline" aria-label="AI backend status">
+        <span class="connection-dot" aria-hidden="true"></span><span id="backend-state-label">AI offline</span>
+      </div>
+    </div>
+    <div class="page-context">
+      <span class="context-label">INSPECTING</span>
+      <p id="page-meta">Open a regular webpage to begin.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="workbench-hero panel">
+      <div class="section-heading">
+        <div><div class="section-kicker">ELEMENT WORKSPACE</div><h2>Select a target from the page</h2></div>
+        <button class="help-button" data-help="picker" aria-label="Help for selecting an element" title="How element selection works">?</button>
+      </div>
+      <p class="hero-copy">Pick a live DOM element, validate its locators, and export the strongest candidate.</p>
+      <div class="actions picker-actions">
+        <button id="pick" class="primary"><span aria-hidden="true">+</span> Select element</button>
+        <button id="stop-pick" class="secondary" disabled>Stop picking</button>
+      </div>
+      <div id="picker-state" class="inline-state" role="status" aria-live="polite">
+        <span class="state-icon" aria-hidden="true">1</span><span>Click Select element, then click a page element. Escape cancels.</span>
+      </div>
+    </section>
+
+    <section class="panel target-panel">
+      <div class="section-heading">
+        <div><div class="section-kicker">NATURAL LANGUAGE</div><h2>Target description</h2></div>
+        <div class="heading-tools"><span class="section-note">Optional</span><button class="help-button" data-help="target" aria-label="Help for target descriptions" title="How target descriptions work">?</button></div>
+      </div>
+      <input id="target" placeholder="Login button, email field..." aria-label="Target description">
+      <div class="actions">
+        <button id="generate" class="secondary">Generate local locators</button>
+        <button id="ask-ai" class="secondary">Ask Gemini</button>
+      </div>
+      <details class="advanced-settings">
+        <summary>AI connection</summary>
+        <label for="backend-url">Backend URL</label>
+        <input id="backend-url" value="http://localhost:8787" spellcheck="false">
+        <p class="hint">Only a small page summary and this description are sent when you ask Gemini.</p>
+      </details>
+    </section>
+
+    <section class="panel inspector-panel">
+      <div class="section-heading">
+        <div><div class="section-kicker">DOM INSPECTOR</div><h2>Selected element</h2></div>
+        <div class="heading-tools"><button id="refresh" class="text-button">Refresh page</button><button class="help-button" data-help="inspector" aria-label="Help for the selected element inspector" title="About the selected element">?</button></div>
+      </div>
+      <div id="element-summary" class="element-summary empty-summary">No element selected.</div>
+      <details class="details-disclosure">
+        <summary>View all attributes</summary>
+        <pre id="element-details" class="details">No element selected.</pre>
+      </details>
+    </section>
+
+    <section class="panel recommendations-panel">
+      <div class="section-heading">
+        <div><div class="section-kicker">EVIDENCE-BASED OUTPUT</div><h2>Locator recommendations</h2></div>
+        <div class="heading-tools"><span id="result-count" class="count-badge">0</span><button class="help-button" data-help="recommendations" aria-label="Help for locator recommendations" title="How to read locator recommendations">?</button></div>
+      </div>
+      <div id="results" class="results"><p class="empty">Select an element to generate validated locators.</p></div>
+    </section>
+
+    <section class="panel export-panel">
+      <div class="section-heading">
+        <div><div class="section-kicker">TEST CODE</div><h2>Export snippet</h2></div>
+        <div class="heading-tools"><span id="export-strategy" class="section-note">No selection</span><button class="help-button" data-help="export" aria-label="Help for test code export" title="How export works">?</button></div>
+      </div>
+      <label for="framework">Framework</label>
+      <select id="framework">
+        <option value="playwright">Playwright - JavaScript</option>
+        <option value="selenium">Selenium - Python</option>
+      </select>
+      <textarea id="export" rows="6" spellcheck="false" placeholder="Select a validated locator to generate test code."></textarea>
+      <div class="actions">
+        <button id="copy-locator" class="secondary">Copy locator</button>
+        <button id="copy-code" class="primary">Copy code</button>
+      </div>
+    </section>
+    <div id="status" role="status" aria-live="polite"></div>
+  </main>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-header">
+      <div><div class="section-kicker">WORKBENCH GUIDE</div><h2 id="help-title">How this section works</h2></div>
+      <button id="help-close" class="icon-button" aria-label="Close help" title="Close help">×</button>
+    </div>
+    <p id="help-body" class="dialog-body"></p>
+    <ol id="help-steps" class="help-steps"></ol>
+    <button id="help-dismiss" class="primary dialog-dismiss">Got it</button>
+  </dialog>
+  <script src="core/locator-engine.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
