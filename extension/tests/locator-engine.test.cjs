@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const core = require("../core/locator-engine.js");
+const evidence = require("../core/evidence-state.js");
 
 test("xpathLiteral handles simple strings", () => {
   assert.equal(core.xpathLiteral("hello"), "'hello'");
@@ -140,4 +141,146 @@ test("validateCandidates distinguishes duplicate matches, wrong targets, and uns
   assert.equal(wrongTarget.targetMatch, false);
   assert.equal(unsupported.status, "invalid");
   assert.equal(unsupported.validationCompleted, true);
+});
+
+test("recommendation presentation exposes match count and selected-element identity", () => {
+  assert.equal(core.formatMatchCount({ validationCompleted: true, count: 1 }), "1 match (unique)");
+  assert.equal(core.formatMatchCount({ validationCompleted: true, count: 3 }), "3 matches");
+  assert.equal(core.formatTargetMatch({ targetMatch: true }), "Matches selected element");
+  assert.equal(core.formatTargetMatch({ targetMatch: false }), "Does not match selected element");
+  assert.equal(core.formatTargetMatch({ targetMatch: null }), "Selected element not checked");
+});
+
+test("recommendation presentation handles missing and invalid scores honestly", () => {
+  assert.equal(core.formatHeuristicScore({ score: 82 }), "Heuristic comparison score: 82/100");
+  assert.equal(core.formatHeuristicScore({}), "Heuristic comparison score unavailable");
+  assert.equal(core.formatMatchCount({ status: "invalid", validationCompleted: true, count: 0 }), "Invalid selector");
+});
+
+test("recommendation guidance covers core locator strategies", () => {
+  assert.match(core.strategyGuidance("Test ID: data-testid"), /automation/);
+  assert.match(core.strategyGuidance("ID (CSS)"), /ID/);
+  assert.match(core.strategyGuidance("Name"), /form control/);
+  assert.match(core.strategyGuidance("Accessible role and name"), /semantic/);
+  assert.match(core.strategyGuidance("Exact text"), /localization/);
+  assert.match(core.strategyGuidance("Last resort absolute XPath"), /fragile/);
+});
+
+test("automatic selection is explicitly provisional", () => {
+  assert.match(core.selectionNotice(true), /Provisional selection/);
+  assert.match(core.selectionNotice(true), /before exporting/);
+  assert.equal(core.selectionNotice(false), "Selected locator for export.");
+});
+
+test("evidence is current after successful validation and export remains available", () => {
+  const page = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  let state = evidence.createState();
+  state = evidence.markValidated(state, page);
+  assert.equal(evidence.isCurrent(state, page), true);
+  assert.equal(state.hostname, "example.test");
+  assert.ok(state.validatedAt);
+});
+
+test("refresh invalidates previous evidence while preserving page metadata", () => {
+  const page = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  let state = evidence.markValidated(evidence.createState(), page);
+  state = evidence.markStale(state);
+  assert.equal(evidence.isCurrent(state, page), false);
+  assert.equal(state.stale, true);
+  assert.equal(state.hostname, "example.test");
+});
+
+test("navigation invalidates evidence for the new page identity", () => {
+  const firstPage = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  const nextPage = { identity: "tab-1:https://example.test/account", hostname: "example.test" };
+  let state = evidence.markValidated(evidence.createState(), firstPage);
+  state = evidence.markStale(state);
+  assert.equal(evidence.isCurrent(state, nextPage), false);
+});
+
+test("active-tab changes cannot reuse evidence from another tab", () => {
+  const firstPage = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  const otherTab = { identity: "tab-2:https://example.test/login", hostname: "example.test" };
+  const state = evidence.markValidated(evidence.createState(), firstPage);
+  assert.equal(evidence.isCurrent(state, otherTab), false);
+});
+
+test("successful revalidation restores export eligibility", () => {
+  const page = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  let state = evidence.markValidated(evidence.createState(), page);
+  state = evidence.markStale(state);
+  state = evidence.markValidated(state, page);
+  assert.equal(state.stale, false);
+  assert.equal(evidence.isCurrent(state, page), true);
+});
+
+test("failed revalidation keeps export eligibility disabled", () => {
+  const page = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  const state = evidence.markStale(evidence.markValidated(evidence.createState(), page));
+  assert.equal(evidence.isCurrent(state, page), false);
+  assert.equal(state.stale, true);
+});
+
+test("stale validation responses cannot become current for a newer page", () => {
+  const firstPage = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  const nextPage = { identity: "tab-1:https://example.test/account", hostname: "example.test" };
+  let state = evidence.markValidated(evidence.createState(), firstPage);
+  const requestPageIdentity = state.pageIdentity;
+  state = evidence.markStale(state);
+  state = evidence.markValidated(state, nextPage);
+  assert.notEqual(requestPageIdentity, state.pageIdentity);
+  assert.equal(evidence.isCurrent(state, firstPage), false);
+  assert.equal(evidence.isCurrent(state, nextPage), true);
+});
+
+test("validation guard rejects an older async response after evidence changes", () => {
+  const firstPage = { identity: "tab-1:https://example.test/login", hostname: "example.test" };
+  const nextPage = { identity: "tab-1:https://example.test/account", hostname: "example.test" };
+  let state = evidence.markValidated(evidence.createState(), firstPage);
+  const token = evidence.createValidationToken(state, firstPage.identity, 1);
+  state = evidence.markStale(state);
+  state = evidence.markValidated(state, nextPage);
+  assert.equal(evidence.isValidationCurrent(token, state, nextPage.identity, 2), false);
+});
+
+test("AI request context accepts a response on the original page", () => {
+  const page = { identity: "tab-1:https://example.test/login", tabId: 1 };
+  const state = evidence.createState();
+  const context = evidence.createRequestContext(1, page, state, "target-a", "login");
+  assert.equal(evidence.isRequestCurrent(context, 1, page, state, "target-a", "login"), true);
+});
+
+test("AI request context rejects active-tab changes", () => {
+  const page = { identity: "tab-1:https://example.test/login", tabId: 1 };
+  const otherTab = { identity: "tab-2:https://example.test/login", tabId: 2 };
+  const state = evidence.createState();
+  const context = evidence.createRequestContext(1, page, state, "target-a", "login");
+  assert.equal(evidence.isRequestCurrent(context, 1, otherTab, state, "target-a", "login"), false);
+});
+
+test("AI request context rejects navigation and evidence revision changes", () => {
+  const page = { identity: "tab-1:https://example.test/login", tabId: 1 };
+  const nextPage = { identity: "tab-1:https://example.test/account", tabId: 1 };
+  let state = evidence.createState();
+  const context = evidence.createRequestContext(1, page, state, "target-a", "login");
+  state = evidence.markStale(state);
+  assert.equal(evidence.isRequestCurrent(context, 1, nextPage, state, "target-a", "login"), false);
+  assert.equal(evidence.isRequestCurrent(context, 1, page, state, "target-a", "login"), false);
+});
+
+test("newer AI request wins when responses arrive out of order", () => {
+  const page = { identity: "tab-1:https://example.test/login", tabId: 1 };
+  const state = evidence.createState();
+  const older = evidence.createRequestContext(1, page, state, null, "login");
+  const newer = evidence.createRequestContext(2, page, state, null, "account");
+  assert.equal(evidence.isRequestCurrent(older, 2, page, state, null, "account"), false);
+  assert.equal(evidence.isRequestCurrent(newer, 2, page, state, null, "account"), true);
+});
+
+test("AI request context rejects target changes and stale failures", () => {
+  const page = { identity: "tab-1:https://example.test/login", tabId: 1 };
+  const state = evidence.createState();
+  const context = evidence.createRequestContext(1, page, state, "target-a", "login");
+  assert.equal(evidence.isRequestCurrent(context, 1, page, state, "target-b", "login"), false);
+  assert.equal(evidence.isRequestCurrent(context, 1, page, evidence.markStale(state), "target-a", "login"), false);
 });

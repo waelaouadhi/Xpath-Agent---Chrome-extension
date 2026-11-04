@@ -82,6 +82,41 @@
     return Math.max(0, Math.min(100, score));
   }
 
+  function formatMatchCount(candidate) {
+    if (candidate?.status === "invalid") return "Invalid selector";
+    if (!candidate?.validationCompleted || typeof candidate.count !== "number") return "Not validated";
+    return candidate.count === 1 ? "1 match (unique)" : `${candidate.count} matches`;
+  }
+
+  function formatTargetMatch(candidate) {
+    if (candidate?.targetMatch === true) return "Matches selected element";
+    if (candidate?.targetMatch === false) return "Does not match selected element";
+    return "Selected element not checked";
+  }
+
+  function formatHeuristicScore(candidate) {
+    return typeof candidate?.score === "number" && Number.isFinite(candidate.score)
+      ? `Heuristic comparison score: ${candidate.score}/100`
+      : "Heuristic comparison score unavailable";
+  }
+
+  function strategyGuidance(strategy) {
+    const value = String(strategy || "").toLowerCase();
+    if (/testid|data-test|data-qa/.test(value)) return "Test ID: intended for automation and less coupled to visible copy.";
+    if (/^id\b|id \(/.test(value)) return "ID: compact and readable; review whether the ID is stable.";
+    if (/^name\b/.test(value)) return "Name: targets a form control's name attribute.";
+    if (/role|accessible/.test(value)) return "Role + accessible name: expresses semantic intent when both are explicit.";
+    if (/text/.test(value)) return "Text: readable, but sensitive to wording and localization.";
+    if (/absolute/.test(value)) return "Absolute XPath: last resort and structurally fragile.";
+    return "Review the matched evidence and explanation before using this strategy.";
+  }
+
+  function selectionNotice(isProvisional) {
+    return isProvisional
+      ? "Provisional selection — review the evidence before exporting."
+      : "Selected locator for export.";
+  }
+
   function absoluteXPath(el) {
     const segments = [];
     let node = el;
@@ -282,5 +317,6 @@
     xpathLiteral, normalizeText, elementText, candidatesForElement,
     validateCandidates, countXPath, countCss, inspectElement,
     exportPlaywright, exportSelenium, candidateScore
+    , formatMatchCount, formatTargetMatch, formatHeuristicScore, strategyGuidance, selectionNotice
   };
 });

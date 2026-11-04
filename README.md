@@ -1,6 +1,6 @@
 # XPath Agent
 
-XPath Agent is my personal QA automation engineering project. I am developing it as a Manifest V3 Chrome/Brave extension to help QA engineers inspect DOM elements, compare maintainable locator strategies, validate selectors against the live page, and reuse the result in Playwright or Selenium tests.
+XPath Agent is a QA automation engineering project created and maintained by **Wael Aouadhi**. It is a Manifest V3 Chrome/Brave extension that helps QA engineers inspect DOM elements, compare maintainable locator strategies, validate selectors against the live page, and reuse the result in Playwright or Selenium tests.
 
 The current implementation includes a local locator engine, an optional Google Gemini backend, a side-panel workbench, framework exports, and automated tests for the locator engine and backend API.
 
@@ -106,6 +106,7 @@ extension/
   sidepanel.js
   content.js
   core/locator-engine.js
+  core/evidence-state.js
   assets/xpath-agent-logo.png
   tests/locator-engine.test.cjs
 backend/

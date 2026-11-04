@@ -11,26 +11,42 @@
     <div class="brand-row">
       <div class="brand-mark"><img src="assets/xpath-agent-logo.png" alt="XPath Agent logo"></div>
       <div>
-        <div class="eyebrow">QA AUTOMATION WORKBENCH</div>
         <h1>XPath Agent</h1>
       </div>
-      <div id="backend-state" class="connection-state offline" aria-label="AI backend status">
+      <div id="backend-state" class="connection-state offline" role="status" aria-live="polite" aria-label="AI backend status">
         <span class="connection-dot" aria-hidden="true"></span><span id="backend-state-label">AI offline</span>
       </div>
     </div>
     <div class="page-context">
-      <span class="context-label">INSPECTING</span>
+      <span class="context-label">CURRENT PAGE</span>
       <p id="page-meta">Open a regular webpage to begin.</p>
     </div>
   </header>
 
-  <main>
-    <section class="workbench-hero panel">
+  <main aria-busy="false">
+    <nav class="workflow-nav" aria-label="Locator workflow">
+      <button class="workflow-step" data-workflow-step="1" data-target="picker-panel" type="button">
+        <span class="workflow-number">1</span><span><strong>Select</strong><small>Choose an element</small></span>
+      </button>
+      <span class="workflow-connector" aria-hidden="true"></span>
+      <button class="workflow-step" data-workflow-step="2" data-target="inspector-panel" type="button">
+        <span class="workflow-number">2</span><span><strong>Inspect</strong><small>Review evidence</small></span>
+      </button>
+      <span class="workflow-connector" aria-hidden="true"></span>
+      <button class="workflow-step" data-workflow-step="3" data-target="recommendations-panel" type="button">
+        <span class="workflow-number">3</span><span><strong>Validate</strong><small>Compare locators</small></span>
+      </button>
+      <span class="workflow-connector" aria-hidden="true"></span>
+      <button class="workflow-step" data-workflow-step="4" data-target="export-panel" type="button">
+        <span class="workflow-number">4</span><span><strong>Export</strong><small>Copy test code</small></span>
+      </button>
+    </nav>
+    <section id="picker-panel" class="workbench-hero panel" aria-labelledby="picker-heading">
       <div class="section-heading">
-        <div><div class="section-kicker">ELEMENT WORKSPACE</div><h2>Select a target from the page</h2></div>
+        <div><div class="section-kicker">ELEMENT WORKSPACE</div><h2 id="picker-heading">Select a target from the page</h2></div>
         <button class="help-button" data-help="picker" aria-label="Help for selecting an element" title="How element selection works">?</button>
       </div>
-      <p class="hero-copy">Pick a live DOM element, validate its locators, and export the strongest candidate.</p>
+      <p class="hero-copy">Pick a live DOM element, validate its locators, and export the best validated candidate.</p>
       <div class="actions picker-actions">
         <button id="pick" class="primary"><span aria-hidden="true">+</span> Select element</button>
         <button id="stop-pick" class="secondary" disabled>Stop picking</button>
@@ -40,16 +56,17 @@
       </div>
     </section>
 
-    <section class="panel target-panel">
+    <section class="panel target-panel" aria-labelledby="target-heading">
       <div class="section-heading">
-        <div><div class="section-kicker">NATURAL LANGUAGE</div><h2>Target description</h2></div>
+        <div><div class="section-kicker">NATURAL LANGUAGE</div><h2 id="target-heading">Target description</h2></div>
         <div class="heading-tools"><span class="section-note">Optional</span><button class="help-button" data-help="target" aria-label="Help for target descriptions" title="How target descriptions work">?</button></div>
       </div>
       <input id="target" placeholder="Login button, email field..." aria-label="Target description">
       <div class="actions">
-        <button id="generate" class="secondary">Generate local locators</button>
-        <button id="ask-ai" class="secondary">Ask Gemini</button>
+        <button id="generate" class="primary">Generate local locators</button>
+        <button id="ask-ai" class="ai-button">Ask Gemini <span>Optional</span></button>
       </div>
+      <p class="local-first-note">Local generation works without AI or an API key.</p>
       <details class="advanced-settings">
         <summary>AI connection</summary>
         <label for="backend-url">Backend URL</label>
@@ -58,10 +75,15 @@
       </details>
     </section>
 
-    <section class="panel inspector-panel">
+    <section id="inspector-panel" class="panel inspector-panel" aria-labelledby="inspector-heading">
       <div class="section-heading">
-        <div><div class="section-kicker">DOM INSPECTOR</div><h2>Selected element</h2></div>
+        <div><div class="section-kicker">DOM INSPECTOR</div><h2 id="inspector-heading">Selected element</h2></div>
         <div class="heading-tools"><button id="refresh" class="text-button">Refresh page</button><button class="help-button" data-help="inspector" aria-label="Help for the selected element inspector" title="About the selected element">?</button></div>
+      </div>
+      <div id="evidence-status" class="evidence-status fresh" role="status" aria-live="polite">
+        <strong id="evidence-status-label">Evidence current</strong>
+        <span id="evidence-meta">No validation yet.</span>
+        <button id="revalidate" class="secondary" type="button" hidden>Revalidate</button>
       </div>
       <div id="element-summary" class="element-summary empty-summary">No element selected.</div>
       <details class="details-disclosure">
@@ -70,17 +92,28 @@
       </details>
     </section>
 
-    <section class="panel recommendations-panel">
+    <section id="recommendations-panel" class="panel recommendations-panel" aria-labelledby="recommendations-heading">
       <div class="section-heading">
-        <div><div class="section-kicker">EVIDENCE-BASED OUTPUT</div><h2>Locator recommendations</h2></div>
-        <div class="heading-tools"><span id="result-count" class="count-badge">0</span><button class="help-button" data-help="recommendations" aria-label="Help for locator recommendations" title="How to read locator recommendations">?</button></div>
+        <div><div class="section-kicker">EVIDENCE-BASED OUTPUT</div><h2 id="recommendations-heading">Locator recommendations</h2></div>
+        <div class="heading-tools"><span id="result-count" class="count-badge" aria-label="Number of locator candidates">0</span><button class="help-button" data-help="recommendations" aria-label="Help for locator recommendations" title="How to read locator recommendations">?</button></div>
       </div>
+      <details class="strategy-guide">
+        <summary>Locator strategy guide</summary>
+        <ul>
+          <li><strong>Test ID</strong><span>Intended for automation and less coupled to visible copy.</span></li>
+          <li><strong>ID</strong><span>Compact and readable; review whether the ID is stable.</span></li>
+          <li><strong>Name</strong><span>Targets a form control's <code>name</code> attribute.</span></li>
+          <li><strong>Role + accessible name</strong><span>Expresses semantic intent when both are explicit.</span></li>
+          <li><strong>Text</strong><span>Readable, but sensitive to wording and localization.</span></li>
+          <li><strong>Absolute XPath</strong><span>Last resort and structurally fragile.</span></li>
+        </ul>
+      </details>
       <div id="results" class="results"><p class="empty">Select an element to generate validated locators.</p></div>
     </section>
 
-    <section class="panel export-panel">
+    <section id="export-panel" class="panel export-panel" aria-labelledby="export-heading">
       <div class="section-heading">
-        <div><div class="section-kicker">TEST CODE</div><h2>Export snippet</h2></div>
+        <div><div class="section-kicker">TEST CODE</div><h2 id="export-heading">Export snippet</h2></div>
         <div class="heading-tools"><span id="export-strategy" class="section-note">No selection</span><button class="help-button" data-help="export" aria-label="Help for test code export" title="How export works">?</button></div>
       </div>
       <label for="framework">Framework</label>
@@ -90,8 +123,8 @@
       </select>
       <textarea id="export" rows="6" spellcheck="false" placeholder="Select a validated locator to generate test code."></textarea>
       <div class="actions">
-        <button id="copy-locator" class="secondary">Copy locator</button>
-        <button id="copy-code" class="primary">Copy code</button>
+        <button id="copy-locator" class="secondary" disabled>Copy locator</button>
+        <button id="copy-code" class="primary" disabled>Copy code</button>
       </div>
     </section>
     <div id="status" role="status" aria-live="polite"></div>
@@ -106,6 +139,7 @@
     <button id="help-dismiss" class="primary dialog-dismiss">Got it</button>
   </dialog>
   <script src="core/locator-engine.js"></script>
+  <script src="core/evidence-state.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
